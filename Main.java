@@ -7,6 +7,6 @@ public class Main {
   static Scanner scan = new Scanner(System.in);
 
   public static void main(String[] args) {
-    scan.useDelimiter("\\s*,\\s*|\\n");
+    scan.useDelimiter("\\s*(\\n|,)\\s*");
   }
 }
