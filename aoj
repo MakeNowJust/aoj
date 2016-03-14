@@ -7,6 +7,7 @@
 #   init    - create the directory, download README.md and sample data, copy template file
 #   check   - check the solution by sample data
 #   submit  - submit the solution to AOJ server
+#   commit  - commit the solution to Git
 #
 # Examples:
 #   Create directory for problem 0149
@@ -130,6 +131,15 @@ aoj::submit() {
   echo "done"
 
   [[ -n $DISPLAY ]] && xdg-open "http://judge.u-aizu.ac.jp/onlinejudge/status.jsp"
+}
+
+aoj::commit() {
+  local id dir
+  id="$(printf "%04d" "$1")"
+  dir="$(printf "%s/Volume%03d/%04d/" "$AOJ_ROOT" $[id / 100])"
+
+  git add "$dir"
+  git commit -m "Accepted '$id: $(head -n1 "$dir/README.md" | sed 's/^# //')"
 }
 
 aoj::download-readme() {
