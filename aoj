@@ -1,0 +1,113 @@
+AOJ_ROOT="$(dirname -- "$(realpath -- "$0")")"
+
+source "$AOJ_ROOT/.secret"
+
+aoj() {
+  local cmd id
+  cmd="aoj::$1"
+  id="${2:-$(basename $(dirname $PWD))}"
+  [[ $id =~ '^[0-9]+$' ]] || return 1
+
+  "$cmd" "$id"
+}
+
+aoj::check() {
+  local id dir source sample
+  id="$(printf "%04d" "$1")"
+  dir="$(printf "%s/Volume%03d/%04d/" "$AOJ_ROOT" $[id / 100] $id)"
+  source="$dir/Main.java"
+
+  javac "$source" -d "$dir" -Xlint || return 1
+  for sample in $dir/input*.txt; do
+    java -cp "$dir" Main < $sample | diff "$(echo $sample | sed 's/input\(.*\)\.txt/output\1.txt/')" - || return 1
+  done
+}
+
+aoj::submit() {
+  local id source
+  id="$(printf "%04d" "$1")"
+  source="$(printf "%s/Volume%03d/%04d/Main.java" "$AOJ_ROOT" $[id / 100] $id)"
+
+  curl "http://judge.u-aizu.ac.jp/onlinejudge/webservice/submit" \
+    --data-urlencode userID="$AOJ_USER"                          \
+    --data-urlencode password="$AOJ_PASS"                        \
+    --data-urlencode problemNO="$id"                             \
+    -d language=JAVA                                             \
+    -d lessonID=""                                               \
+    --data-urlencode sourceCode="$(cat "$source")" >/dev/null
+
+  xdg-open "http://judge.u-aizu.ac.jp/onlinejudge/status.jsp"
+}
+
+aoj::download-readme() {
+  local id html readme
+  id="$(printf "%04d" "$1")"
+  readme="$(printf "%s/Volume%03d/%04d/README.md" "$AOJ_ROOT" $[id / 100] $id)"
+
+  echo "Download README.md of Problem $id"
+
+  html=$(curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp" \
+    | iconv -fsjis -tutf8                                                               \
+    | awk '/<div class="description">/, /<\/div>/') || return 1
+
+  curl -s "http://heckyesmarkdown.com/go/" --data-urlencode html="$html" > $readme || return 1
+
+  grep '\[.*\]:' "$readme" \
+    | awk -F': ?' -v dir="$(dirname $readme)" '
+      {
+        command = sprintf("cd %s && dir=$(dirname %s) && mkdir -p $dir && cd $dir && " \
+          "curl -sO http://judge.u-aizu.ac.jp/onlinejudge/%s",
+          readme, $2, $2)
+        system(command)
+        close(command)
+      }
+    '
+}
+
+aoj::download-sample() {
+  local id
+  id="$(printf "%04d" "$1")"
+
+  echo "Download sample data of Problem $id"
+
+  curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id" \
+    | iconv -fsjis -tutf8                                                \
+    | tr -d '\r'                                                         \
+    | awk -v AOJ_ROOT="$AOJ_ROOT" -v id="$id" '
+      BEGIN {
+        count = 0
+      }
+
+      />Sample Input.*<\// {
+        flag1 = 1
+      }
+
+      flag1 && /<pre>/ {
+        flag2 = 1
+      }
+ 
+      flag2 && /<\/pre>/ {
+        flag2 = 0
+
+        filename = sprintf("%s/Volume%03d/%04d/%s%d.txt",
+          AOJ_ROOT,
+          id / 100,
+          id,
+          count % 2 == 0 ? "input" : "output",
+          (count / 2) + 1)
+        printf("%s", data) > filename
+
+        data = ""
+        count += 1
+      }
+
+      flag2 {
+        if (flag2 > 1) {
+          data = data $0 "\n"
+        }
+        flag2 += 1
+      }
+    ' || return 1
+}
+
+# vim:ft=zsh:
