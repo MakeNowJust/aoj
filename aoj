@@ -1,14 +1,97 @@
-AOJ_ROOT="$(dirname -- "$(realpath -- "$0")")"
+# AOJ utility command built on zsh
+#
+# Usage: aoj [command] [problem id (optional, infered from current directory)]
+#
+# Commands:
+#   help    - show this help
+#   init    - create the directory, download README.md and sample data, copy template file
+#   check   - check the solution by sample data
+#   submit  - submit the solution to AOJ server
+#
+# Examples:
+#   Create directory for problem 0149
+#     $ aoj init 0149
+#   Check the solution of problem 0132
+#     $ pwd
+#       AOJ_ROOT/Volume001/0132/
+#     $ aoj check
+#   Submit the solution of problem 0150
+#     $ pwd
+#       AOJ_ROOT/Volume001/0150
+#     $ aoj submit
+#
+#
+# Author: TSUYUSATO Kitsune <make.just.on@gmail.com>
+#
+# Note:
+#   - This script works on loading by `source` like `source ./aoj`.
+#
+#   - A user name and a password are read from `.secret` file as shell script.
+#
+#   - The directory layout assumed by this script is:
+#
+#     AOJ_ROOT/
+#       Volume000/
+#         0000/
+#           Main.java
+#           input1.txt
+#           output1.txt
+#           ...
+#         0001/
+#           ...
+#         0002/
+#           ...
+#         ...
+#       Volume001/
+#         0100/
+#          ...
+#         0101/
+#          ...
+#         ...
+#       Volume002/
+#         ...
+#       ...
+
+AOJ_COMMAND="$(realpath -- "$0")"
+AOJ_ROOT="$(dirname -- "$AOJ_COMMAND")"
 
 source "$AOJ_ROOT/.secret"
 
 aoj() {
   local cmd id
   cmd="aoj::$1"
-  id="${2:-$(basename $(dirname $PWD))}"
-  [[ $id =~ '^[0-9]+$' ]] || return 1
+  id="${2:-$(basename "$PWD")}"
+  [[ $cmd == "aoj::help" || $id =~ '^[0-9]+$' ]] || {
+    echo "\e[31mError: cannot infer problem id\e[0m" >&2
+    aoj::help; return 1
+  }
+  type "$cmd" &>/dev/null || {
+    echo "\e[31mError: unknown command\e[0m" >&2
+    aoj::help; return 1
+  }
 
   "$cmd" "$id"
+}
+
+aoj::help() {
+  awk '! /^#/ { flag = 1 } ! flag' "$AOJ_COMMAND" | sed 's/^# \?//'
+}
+
+aoj::init() {
+  local id dir
+  id="$(printf "%04d" "$1")"
+  dir="$(printf "%s/Volume%03d/%04d/" "$AOJ_ROOT" $[id / 100] $id)"
+
+  echo -n "Create the directory and copy the template file: "
+
+  mkdir -p "$dir" \
+    && cd "$dir"  \
+    && cp "$AOJ_ROOT/Main.java" "$dir" || return 1
+
+  echo "done"
+
+  aoj::download-readme "$id" || return 1
+  aoj::download-sample "$id" || return 1
 }
 
 aoj::check() {
@@ -17,10 +100,16 @@ aoj::check() {
   dir="$(printf "%s/Volume%03d/%04d/" "$AOJ_ROOT" $[id / 100] $id)"
   source="$dir/Main.java"
 
+  echo "Check the solution of problem $id: "
+
   javac "$source" -d "$dir" -Xlint || return 1
   for sample in $dir/input*.txt; do
-    java -cp "$dir" Main < $sample | diff "$(echo $sample | sed 's/input\(.*\)\.txt/output\1.txt/')" - || return 1
+    echo -n $sample | sed 's/.*\/input\(.*\)\.txt/sample \1: /'
+    java -cp "$dir" Main < $sample | diff -u "$(echo $sample | sed 's/input\(.*\)\.txt/output\1.txt/')" - || return 1
+    echo ok
   done
+
+  echo "done"
 }
 
 aoj::submit() {
@@ -28,15 +117,19 @@ aoj::submit() {
   id="$(printf "%04d" "$1")"
   source="$(printf "%s/Volume%03d/%04d/Main.java" "$AOJ_ROOT" $[id / 100] $id)"
 
-  curl "http://judge.u-aizu.ac.jp/onlinejudge/webservice/submit" \
-    --data-urlencode userID="$AOJ_USER"                          \
-    --data-urlencode password="$AOJ_PASS"                        \
-    --data-urlencode problemNO="$id"                             \
-    -d language=JAVA                                             \
-    -d lessonID=""                                               \
+  echo -n "Submit the solution of problem $id: "
+
+  curl -s "http://judge.u-aizu.ac.jp/onlinejudge/webservice/submit" \
+    --data-urlencode userID="$AOJ_USER"                             \
+    --data-urlencode password="$AOJ_PASS"                           \
+    --data-urlencode problemNO="$id"                                \
+    -d language=JAVA                                                \
+    -d lessonID=""                                                  \
     --data-urlencode sourceCode="$(cat "$source")" >/dev/null
 
-  xdg-open "http://judge.u-aizu.ac.jp/onlinejudge/status.jsp"
+  echo "done"
+
+  [[ -n $DISPLAY ]] && xdg-open "http://judge.u-aizu.ac.jp/onlinejudge/status.jsp"
 }
 
 aoj::download-readme() {
@@ -44,7 +137,7 @@ aoj::download-readme() {
   id="$(printf "%04d" "$1")"
   readme="$(printf "%s/Volume%03d/%04d/README.md" "$AOJ_ROOT" $[id / 100] $id)"
 
-  echo "Download README.md of Problem $id"
+  echo -n "Download README.md of problem $id: "
 
   html=$(curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp" \
     | iconv -fsjis -tutf8                                                               \
@@ -62,13 +155,15 @@ aoj::download-readme() {
         close(command)
       }
     '
+
+    echo "done"
 }
 
 aoj::download-sample() {
   local id
   id="$(printf "%04d" "$1")"
 
-  echo "Download sample data of Problem $id"
+  echo -n "Download sample data of problem $id: "
 
   curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id" \
     | iconv -fsjis -tutf8                                                \
@@ -108,6 +203,8 @@ aoj::download-sample() {
         flag2 += 1
       }
     ' || return 1
+
+  echo "done"
 }
 
 # vim:ft=zsh:
