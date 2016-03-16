@@ -136,10 +136,10 @@ aoj::submit() {
 aoj::commit() {
   local id dir
   id="$(printf "%04d" "$1")"
-  dir="$(printf "%s/Volume%03d/%04d/" "$AOJ_ROOT" $[id / 100])"
+  dir="$(printf "%s/Volume%03d/%04d/" "$AOJ_ROOT" $[id / 100] $id)"
 
   git add "$dir"
-  git commit -m "Accepted '$id: $(head -n1 "$dir/README.md" | sed 's/^# //')"
+  git commit -m "Accepted '$id: $(head -n1 "$dir/README.md" | sed 's/^# //')'"
 }
 
 aoj::download-readme() {
