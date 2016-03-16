@@ -160,13 +160,13 @@ aoj::download-readme() {
       {
         command = sprintf("cd %s && dir=$(dirname %s) && mkdir -p $dir && cd $dir && " \
           "curl -sO http://judge.u-aizu.ac.jp/onlinejudge/%s",
-          readme, $2, $2)
+          dir, $2, $2)
         system(command)
         close(command)
       }
     '
 
-    echo "done"
+  echo "done"
 }
 
 aoj::download-sample() {
