@@ -8,6 +8,7 @@
 #   check   - check the solution by sample data
 #   submit  - submit the solution to AOJ server
 #   commit  - commit the solution to Git
+#   open    - open problem page on browser
 #
 # Examples:
 #   Create directory for problem 0149
@@ -139,6 +140,13 @@ aoj::commit() {
 
   git add "$dir"
   git commit -m "Accepted '$id: $(head -n1 "$dir/README.md" | sed 's/^# //')'"
+}
+
+aoj::open() {
+  local id dir
+  id="$(printf "%04d" "$1")"
+
+  xdg-open "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp"
 }
 
 aoj::download-readme() {
