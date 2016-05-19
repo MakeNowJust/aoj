@@ -20,26 +20,39 @@ public class Main {
         w[i] = scan.nextInt();
       }
 
-      int[][] dp = new int[m][n];
-      dp[0][0] = w[0];
-      for (int i = 1; i < n; i++) {
-        dp[0][i] = w[i] + dp[0][i - 1];
-      }
-
-      for (int i = 1; i < m; i++) {
-        Arrays.fill(dp[i], Integer.MAX_VALUE);
-
-        for (int j = i - 1; j < n; j++) {
-          int ws = 0;
-          dp[i][j] = Math.min(dp[i][j], dp[i - 1][j]);
-          for (int k = j + 1; k < n; k++) {
-            ws += w[k];
-            dp[i][k] = Math.min(dp[i][k], Math.max(dp[i - 1][j], ws));
-          }
+      int min = 0;
+      int max = 1500000;
+      int ans = 0;
+      while (min <= max) {
+        int mid = (min + max) / 2;
+        if (check(w, mid) <= m) {
+          ans = mid;
+          max = mid - 1;
+        } else {
+          min = mid + 1;
         }
       }
 
-      System.out.println(dp[m - 1][n - 1]);
+      System.out.println(ans);
     }
+  }
+
+  static int check(int[] w, int d) {
+    int m = 1;
+    int s = 0;
+
+    for (int i = 0; i < w.length; i++) {
+      if (w[i] > d) {
+        return Integer.MAX_VALUE;
+      }
+
+      s += w[i];
+      if (s > d) {
+        m += 1;
+        s = w[i];
+      }
+    }
+
+    return m;
   }
 }
