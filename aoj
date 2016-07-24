@@ -60,7 +60,8 @@ source "$AOJ_ROOT/.secret"
 
 aoj() {
   local cmd id
-  cmd="aoj::$1"
+  local MATCH MBEGIN MEND
+  cmd="aoj::${1:-help}"
   id="${2:-$(basename "$PWD")}"
   [[ $cmd == "aoj::help" || $id =~ '^[0-9]+$' ]] || {
     echo "\e[31mError: cannot infer problem id\e[0m" >&2
@@ -130,7 +131,7 @@ aoj::submit() {
 
   echo "done"
 
-  [[ -n $DISPLAY ]] && xdg-open "http://judge.u-aizu.ac.jp/onlinejudge/status.jsp"
+  [[ -n $DISPLAY ]] && aoj::_open "http://judge.u-aizu.ac.jp/onlinejudge/status.jsp"
 }
 
 aoj::commit() {
@@ -146,7 +147,7 @@ aoj::open() {
   local id dir
   id="$(printf "%04d" "$1")"
 
-  xdg-open "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp"
+  aoj::_open "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp"
 }
 
 aoj::download-readme() {
@@ -157,7 +158,7 @@ aoj::download-readme() {
   echo -n "Download README.md of problem $id: "
 
   html=$(curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp" \
-    | iconv -fsjis -tutf8                                                               \
+    | iconv -f sjis -t utf8                                                             \
     | awk '/<div class="description">/, /<\/div>/') || return 1
 
   curl -s "http://heckyesmarkdown.com/go/" --data-urlencode html="$html" > $readme || return 1
@@ -183,7 +184,7 @@ aoj::download-sample() {
   echo -n "Download sample data of problem $id: "
 
   curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id" \
-    | iconv -fsjis -tutf8                                                \
+    | iconv -f sjis -t utf8                                              \
     | tr -d '\r'                                                         \
     | awk -v AOJ_ROOT="$AOJ_ROOT" -v id="$id" '
       BEGIN {
@@ -222,6 +223,15 @@ aoj::download-sample() {
     ' || return 1
 
   echo "done"
+}
+
+aoj::_open() {
+  for local open in xdg-open open; do
+    if which "$open" &>/dev/null; then
+      $open "$1"
+      break
+    fi
+  done
 }
 
 # vim:ft=zsh:
