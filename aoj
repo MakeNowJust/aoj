@@ -64,7 +64,7 @@ aoj() {
   cmd="aoj::${1:-help}"
   id="${2:-$(basename "$PWD")}"
   [[ $cmd == "aoj::help" || $id =~ '^[0-9]+$' ]] || {
-    echo "\e[31mError: cannot infer problem id\e[0m" >&2
+    echo "\e[31mError: please specify problem id\e[0m" >&2
     aoj::help; return 1
   }
   type "$cmd" &>/dev/null || {
@@ -76,7 +76,7 @@ aoj() {
 }
 
 aoj::help() {
-  awk '! /^#/ { flag = 1 } ! flag' "$AOJ_COMMAND" | sed 's/^# \?//'
+  awk '! /^#/ { flag = 1 } ! flag' "$AOJ_COMMAND" | sed 's/^# \{0,1\}//'
 }
 
 aoj::init() {
