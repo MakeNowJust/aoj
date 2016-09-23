@@ -1,6 +1,6 @@
 # AOJ utility command built on zsh
 #
-# Usage: aoj [command] [problem id (optional, infered from current directory)]
+# Usage: aoj [command] ['next' or problem id (optional, infered from current directory)]
 #
 # Commands:
 #   help    - show this help
@@ -63,6 +63,7 @@ aoj() {
   local MATCH MBEGIN MEND
   cmd="aoj::${1:-help}"
   id="${2:-$(basename "$PWD")}"
+  [[ $id == next ]] && id=$[$(basename "$PWD") + 1]
   [[ $cmd == "aoj::help" || $id =~ '^[0-9]+$' ]] || {
     echo "\e[31mError: please specify problem id\e[0m" >&2
     aoj::help; return 1
