@@ -108,7 +108,7 @@ aoj::check() {
   javac "$source" -d "$dir" -Xlint || return 1
   for sample in $dir/input*.txt; do
     echo -n $sample | sed 's/.*\/input\(.*\)\.txt/sample \1: /'
-    java -cp "$dir" Main < $sample | diff -u "$(echo $sample | sed 's/input\(.*\)\.txt/output\1.txt/')" - || return 1
+    (time java -cp "$dir" Main < "$sample") | diff -u "$(echo "$sample" | sed 's/input\(.*\)\.txt/output\1.txt/')" - || return 1
     echo ok
   done
 
