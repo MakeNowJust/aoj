@@ -158,9 +158,9 @@ aoj::download-readme() {
 
   echo -n "Download README.md of problem $id: "
 
-  html=$(curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp" \
+  html="$(curl -s "http://judge.u-aizu.ac.jp/onlinejudge/description.jsp?id=$id&lang=jp" \
     | iconv -f sjis -t utf8                                                             \
-    | awk '/<div class="description">/, /<\/div>/') || return 1
+    | awk '/<div class="description">/, /<\/div>/')" || return 1
 
   curl -s "http://heckyesmarkdown.com/go/" --data-urlencode html="$html" > $readme || return 1
 
